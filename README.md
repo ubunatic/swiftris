@@ -5,16 +5,23 @@ Work in progress!
 
 ## Status
 - working termial screen and reusable view class
-- basic input reading
+- raw input reading and terminal rendering
 - separate console and main screen
+- view flow with title, help, exit, and game views
+- tile drawing and movement
+- border collision
 
 ```txt
-🟨🟨           🟪
-  🟨 SWIFTRIS! 🟪
-  🟨           🟪🟪
-Welcome to Swiftris!
+Score: 0
+Level: 1
+Lines: 0
 
-[P]lay
-[H]elp
-[Q]uit
+┌────────────────────┐
+│　　　　　　　　　　│
+│　　　　　　　　　　│
+│　　　　　🟨🟨　　　│
+│　　　　🟨🟨　　　　│
+│　　　　　　　　　　│
+│　　　　　　　　　　│
+└────────────────────┘
 ```
