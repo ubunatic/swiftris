@@ -1,6 +1,16 @@
+import Foundation
+
 class View {
-    var next: View?
-    var input: String?
+    public var next: View?
+    public var input: String?
+    public var key: Key?
+
+    var screen:[String] = [
+        "Empty View",
+        "",
+        "[Q]uit",
+        ""
+    ]
 
     var console:[String] = []
 
@@ -8,65 +18,64 @@ class View {
         self.next = next
     }
 
-    func show() -> View? {
-        render()
-        while read() {
-            render()
+    // show will render the view and read input until the read function returns false.
+    // This the default behavior for a view and can be overridden if needed.
+    // Also see: render, read
+    public func show(_ t:Terminal) -> View? {
+        render(t)
+        while read(t) {
+            render(t)
         }
         return next
     }
 
-    // print captures the print() output of a view and displays it under the main screen
-    func print(_ items: Any..., separator: String = " ", terminator: String = "\n") {
+    // print captures the print() output of a view and displays it under the main screen.
+    public func print(_ items: Any..., separator: String = " ", terminator: String = "\n\r") {
         // append to console
         console.append(items.map { "\($0)" }.joined(separator: separator))
         console.append(terminator)
         while console.count > 20 { console.removeFirst() }
-        render()
-        renderConsole()
     }
 
-    // plot plots the lines of the screen
-    func plot(_ lines:String..., clear:Bool = true, partial:Bool = false) {
+    // plot adds lines to the screen buffer.
+    public func plot(_ lines:[String], clear:Bool = true) {
         if clear {
             // clear terminal screen
-            Swift.print("\u{001B}[2J")
+            screen.removeAll()
+            screen.append(ClearString + GotoTop)
         }
         for line in lines {
-            Swift.print(line)
+            screen.append(line)
         }
-        if partial {
-            return
-        }
-        renderConsole()
     }
 
-    func renderConsole() {
+    // The default render function prints the screen buffer and console buffer to the terminal.
+    // This method can be overridden to provide custom rendering.
+    public func render(_ t:Terminal) {
+        for line in screen {
+            t.print(line)
+        }
         for line in console {
-            Swift.print(line, terminator: "")
+            t.print(line, terminator: "")
         }
+        t.decorate()
     }
 
-    func render() {
-        print("Empty View")
-        print("")
-        print("[Q]uit")
-        print("")
-    }
-
-    func readKey() -> String {
+    public func readKey() -> String {
+        // read single key from terminal without waiting for return key
         if let val = readLine(strippingNewline: true) {
             return val
         }
         return ""
     }
 
-    // This default read function will read and store the input and return true
-    // to continue reading, unless the input is "Q" or "q".
-    func read() -> Bool {
-        input = readKey()
-        switch input {
-        case "Q", "q":
+    // The default read function reads and stores terminal input.
+    // It returns false if the input is "Q" or "q".
+    // Otherwise it returns true.
+    public func read(_ t: Terminal) -> Bool {
+        key = t.readKey()
+        switch key {
+        case .Q, .q:
             return false
         default:
             return true
