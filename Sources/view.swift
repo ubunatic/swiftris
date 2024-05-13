@@ -1,9 +1,9 @@
 import Foundation
 
 class View {
-    public var next: View?
-    public var input: String?
-    public var key: Key?
+    var previous: View?
+    var input: String?
+    var consoleLimit = 7
 
     var screen:[String] = [
         "Empty View",
@@ -14,8 +14,9 @@ class View {
 
     var console:[String] = []
 
-    init(_ next: View? = nil) {
-        self.next = next
+    init(_ previous: View? = nil) {
+        self.previous = previous
+        self.console = Array(repeating: "", count: consoleLimit)
     }
 
     // show will render the view and read input until the read function returns false.
@@ -23,18 +24,23 @@ class View {
     // Also see: render, read
     public func show(_ t:Terminal) -> View? {
         render(t)
-        while read(t) {
+        while true {
+            if let k = t.readKey() {
+                if let next = handleKey(k) {
+                    next.print("key:", k, "next:", next)
+                    return next
+                }
+                self.print("key:", k)
+            }
             render(t)
         }
-        return next
     }
 
     // print captures the print() output of a view and displays it under the main screen.
     public func print(_ items: Any..., separator: String = " ", terminator: String = "\n\r") {
         // append to console
-        console.append(items.map { "\($0)" }.joined(separator: separator))
-        console.append(terminator)
-        while console.count > 20 { console.removeFirst() }
+        console.append(items.map { "\($0)" }.joined(separator: separator) + terminator)
+        while console.count > consoleLimit { console.removeFirst() }
     }
 
     // plot adds lines to the screen buffer.
@@ -58,27 +64,28 @@ class View {
         for line in console {
             t.print(line, terminator: "")
         }
+        for line in t.log {
+            t.print(line, terminator: "\n\r")
+        }
         t.decorate()
     }
 
-    public func readKey() -> String {
-        // read single key from terminal without waiting for return key
-        if let val = readLine(strippingNewline: true) {
-            return val
-        }
-        return ""
-    }
-
-    // The default read function reads and stores terminal input.
-    // It returns false if the input is "Q" or "q".
-    // Otherwise it returns true.
-    public func read(_ t: Terminal) -> Bool {
-        key = t.readKey()
-        switch key {
+    // It returns Exit view if the key is "Q" or "q".
+    // Otherwise it returns nil.
+    // This method can be overridden to provide custom key handling logic.
+    public func handleKey(_ k: Key) -> View? {
+        switch k {
         case .Q, .q:
-            return false
+            return Exit()
+        case .B, .b, .esc:
+            print("back, key:", k)
+            return previous
+        case .enter, .space, .return:
+            print("enter, key:", k)
+            return previous
         default:
-            return true
+            break
         }
+        return nil
     }
 }

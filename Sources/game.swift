@@ -6,62 +6,19 @@ class Game: View {
     var level: Int
     var lines: Int
     var nextPiece: Int
-    var piece: Int
+    var currPiece: Int
+    var rotation: Int
     var x: Int
     var y: Int
 
-    let pieces = [
-        [ // O
-            [0, 0, 0, 0],
-            [0, 1, 1, 0],
-            [0, 1, 1, 0],
-            [0, 0, 0, 0]
-        ],
-        [ // T
-            [0, 0, 0, 0],
-            [0, 0, 1, 0],
-            [0, 1, 1, 1],
-            [0, 0, 0, 0]
-
-        ],
-        [ // L
-            [0, 0, 0, 0],
-            [0, 0, 1, 0],
-            [1, 1, 1, 0],
-            [0, 0, 0, 0]
-        ],
-        [// S
-            [0, 0, 0, 0],
-            [0, 1, 1, 0],
-            [1, 1, 0, 0],
-            [0, 0, 0, 0]
-        ],
-        [ // Z
-            [0, 0, 0, 0],
-            [1, 1, 0, 0],
-            [0, 1, 1, 0],
-            [0, 0, 0, 0]
-        ],
-        [ // J
-            [0, 0, 0, 0],
-            [1, 0, 0, 0],
-            [1, 1, 1, 0],
-            [0, 0, 0, 0]
-        ],
-        [ // I
-            [0, 0, 0, 0],
-            [1, 1, 1, 1],
-            [0, 0, 0, 0],
-            [0, 0, 0, 0]
-        ]
-    ]
     override init(_ next: View? = nil) {
         board = Array(repeating: Array(repeating: 0, count: 10), count: 20)
         score = 0
         level = 1
         lines = 0
         nextPiece = Int.random(in: 0..<7)
-        piece = 0
+        currPiece = 0
+        rotation = 0
         x = 0
         y = 0
         super.init(next)
@@ -69,48 +26,91 @@ class Game: View {
     }
 
     func spawnPiece() {
-        piece = nextPiece
+        currPiece = nextPiece
+        rotation = 0
         nextPiece = Int.random(in: 0..<7)
         x = 4
         y = 4
         setPiece()
     }
 
-    func setPiece() {
-        let shape = pieces[piece]
+    func setPiece(val: Int = 1) {
+        let p = getShape(rotation)
         for i in 0..<4 {
             for j in 0..<4 {
-                if shape[i][j] == 1 {
-                    board[y + i][x + j] = 1
+                if p.shape[i][j] == 1 {
+                    board[y + i][x + j] = val
                 }
             }
         }
     }
 
-    override func render(_ t: Terminal) {
-        var screen = [
-            "Score: \(score)",
-            "Level: \(level)",
-            "Lines: \(lines)",
-            "",
-            "┌────────────────────┐",
-        ]
-        for i in 0..<20 {
-            var line = "│"
-            for j in 0..<10 {
-                line.append(board[i][j] == 0 ? "　" : "🟨")
-            }
-            line.append("│")
-            screen.append(line)
+    func getRotation(_ dir: Int) -> Int {
+        switch currPiece {
+        case 0: // O
+            return 0
+        case 6: // I
+            return rotation == 0 ? 1 : 0
+        default:
+            return (rotation + dir + 4) % 4
         }
-        screen.append("└────────────────────┘")
+    }
+
+    // rotatePiece rotates the current piece if possible.
+    // The default rotation center is (x:1, y:2) from top left.
+    // "O" piece is not rotated (4x4 grid is symmetrical).
+    // "I" piece is rotated such that it does not leave the 4x4 grid (it just flips between horizontal and vertical).
+    // Other pieces are rotated around the center (1, 2).
+    func getShape() -> Piece { return getShape(nil) }
+    func getShape(_ rotation: Int?) -> Piece {
+        let rot = rotation ?? self.rotation
+        return Piece.new(currPiece, rotation: rot)
+    }
+
+    override func render(_ t: Terminal) {
+        var screen = [String]()
+        for i in 0..<20 {
+            var line = ""
+            for j in 0..<10 {
+                var color = board[i][j]
+                if color == 1 {
+                    color = getShape().color
+                }
+                switch color {
+                case 0:  line.append("　")
+                case 10: line.append("🟦")
+                case 11: line.append("🟪")
+                case 12: line.append("🟥")
+                case 13: line.append("🟩")
+                case 14: line.append("🟧")
+                case 15: line.append("⬜️")
+                case 16: line.append("🟨")
+                default: line.append("　")
+                }
+            }
+            screen.append("|" + line + "|")
+        }
+
+        screen = ["┌────────────────────┐"]
+               + screen
+               + ["└────────────────────┘"]
+
+        screen[1].append("  Score: \(score)")
+        screen[2].append("  Level: \(level)")
+        screen[3].append("  Lines: \(lines)")
+
         plot(screen)
         super.render(t)
     }
 
     func canMove(x: Int, y: Int) -> Bool {
+        return canMove(x: x, y: y, shape: getShape().shape)
+    }
+
+    func canMove(x: Int, y: Int, shape: [[Int]]?) -> Bool {
+        let shape = shape ?? getShape().shape
+
         print("canMove", x, y)
-        let shape = pieces[piece]
         for i in 0..<4 {
             for j in 0..<4 {
                 if shape[i][j] == 1 {
@@ -124,35 +124,44 @@ class Game: View {
                         print("canMove failed at ny", ny)
                         return false
                     }
-                    // TODO: check collision (excl. self)
-                    // if board[ny][nx] == 1 {
-                    //     print("canMove failed at board", nx, ny)
-                    //     return false
-                    // }
+                    if board[ny][nx] > 1 {
+                        print("canMove failed at board", nx, ny)
+                        return false
+                    }
                 }
             }
         }
         return true
     }
 
+    func canRotate(dir: Int) -> Bool {
+        let shape = getShape(getRotation(dir)).shape
+        return canMove(x: x, y: y, shape: shape)
+    }
+
+    func dropPiece() {
+        while canMove(x: x, y: y + 1) {
+            y += 1
+        }
+        setPiece(val: getShape().color)
+        // checkLines()
+        spawnPiece()
+    }
+
     func updateBoard() {
         for i in 0..<20 {
             for j in 0..<10 {
-                board[i][j] = 0
+                if board[i][j] == 1 {
+                    board[i][j] = 0
+                }
             }
         }
         setPiece()
     }
 
-    override func read(_ t: Terminal) -> Bool {
-        let ok = super.read(t)
-        switch key {
-        case .Q, .q:
-            next = Exit()
-            return false
-        case .H, .h:
-            next = Help(self)
-            return false
+    override func handleKey(_ k: Key) -> View? {
+        // do not call super.handleKey(k), all keys are handled here
+        switch k {
         case .left:
             if canMove(x: x - 1, y: y) {
                 x -= 1
@@ -166,17 +175,22 @@ class Game: View {
                 y += 1
             }
         case .up:
-            if canMove(x: x, y: y - 1) {
-                y -= 1
+            if canRotate(dir: 1) {
+                rotation = getRotation(1)
             }
         case .space:
             while canMove(x: x, y: y + 1) {
                 y += 1
             }
+            dropPiece()
+        case .Q, .q:
+            return Exit()
+        case .H, .h:
+            return Help(self)
         default:
-            return ok
+            break
         }
         updateBoard()
-        return ok
+        return nil
     }
 }

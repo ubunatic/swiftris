@@ -1,20 +1,22 @@
 import Foundation
 
 class Help: View {
-    let title = bold_white("SWIFTRIS!")
     let content: [String]
+    let title = bold_white("SWIFTRIS")
 
     override init(_ next: View? = nil) {
         self.content = [
-            "🟨🟨           🟪  ",
-            "  🟨 \(title) 🟪  ",
-            "  🟨           🟪🟪",
+            "🟨🟨　　　　　　🟪",
+            "　🟨　\(title)　🟪",
+            "　🟨　　　　　　🟪🟪",
             "Help",
             "",
-            "Use the arrow keys to move the piece.",
-            "Use the space bar to rotate the piece.",
-            "Press 'Q' to quit.",
+            "   \(invert(bold_white("[↑]")))     rotate piece",
+            "\(invert(bold_white("[←][↓][→]")))  move piece",
             "",
+            "\(invert(bold_white("[ space ]")))  drop piece",
+            "",
+            "[Q]uit",
             "[B]ack",
             ""
         ]
@@ -24,15 +26,5 @@ class Help: View {
     override func render(_ t: Terminal) {
         plot(content)
         super.render(t)
-    }
-
-    override func read(_ t:Terminal) -> Bool {
-        let ok = super.read(t)
-        switch key {
-        case .B, .b:
-            return false
-        default:
-            return ok
-        }
     }
 }

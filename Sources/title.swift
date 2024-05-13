@@ -1,93 +1,63 @@
-// Swift Argument Parser
-// https://swiftpackageindex.com/apple/swift-argument-parser/documentation
-
 import Foundation
 import ArgumentParser
 
-@main
-struct swiftris: ParsableCommand {
-    mutating func run() throws {
-        let t = Terminal()
-        do {
-            try t.makeRaw()
-            Screen(main: Title()).show(t)
-            try t.restore()
-        } catch {
-            try t.restore()
-            throw error
-        }
-    }
-}
-
-class Exit: View {
-    override func render(_ t: Terminal) {
-        plot(["Goodbye!"])
-        super.render(t)
-    }
-}
-
-class Screen {
-    var main:View
-    var current:View
-
-    init(main:View) {
-        self.main = main
-        self.current = main
-    }
-
-    func show(_ t:Terminal) {
-        while true {
-            guard let next = current.show(t) else { return }
-            current = next
-            // if current is Exit, return
-            if current is Exit {
-                current.render(t)
-                sleep(1)
-                return
-            }
-        }
-    }
-}
-
 class Title: View {
-    let title = bold_white("SWIFTRIS!")
-    let content: [String]
+    let title = bold_white("SWIFTRIS")
+    let header: [String]
+    let footer: [String]
+    var menu: [String]
+    var pos = 0
+
+    // connected views
+    var game: Game!
+    var help: Help!
 
     init() {
-        self.content = [
-            "🟨🟨           🟪  ",
-            "  🟨 \(title) 🟪  ",
-            "  🟨           🟪🟪",
+        self.header = [
+            "🟨🟨　　　　　　🟪",
+            "　🟨　\(title)　🟪",
+            "　🟨　　　　　　🟪🟪",
             "Welcome to Swiftris!",
             "",
+        ]
+        self.menu = [
             "[P]lay",
             "[H]elp",
             "[Q]uit",
-            ""
         ]
+        self.footer = [""]
         super.init(nil)
+
+        self.game = Game(self)
+        self.help = Help(self)
     }
 
     override func render(_ t: Terminal) {
-        plot(content)
+        let selection = menu.map { $0 == menu[pos] ? bold_white($0) : $0 }
+        plot(header + selection + footer)
         super.render(t)
     }
 
-    override func read(_ t:Terminal) -> Bool {
-        let ok = super.read(t)
-        switch key {
-        case .P, .p:
-            next = Game(self)
-            return false
-        case .H, .h:
-            next = Help(self)
-            return false
-        case .Q, .q:
-            next = Exit()
-            return false
+    override func handleKey(_ k:Key) -> View? {
+        let next = super.handleKey(k)
+        switch k {
+        case .P, .p: return game
+        case .H, .h: return help
+        case .Q, .q: return Exit()
+        case .enter, .space, .return:
+            switch pos {
+            case 0:  return game
+            case 1:  return help
+            case 2:  return Exit()
+            default: break
+            }
+        case .up:
+            pos = (pos + menu.count - 1) % menu.count
+        case .down:
+            pos = (pos + 1) % menu.count
         default:
-            return ok
+            break
         }
+        return next
     }
 }
-

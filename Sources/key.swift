@@ -1,13 +1,16 @@
 
 struct Key {
+    // static let none = Key(rawValue: -1)
     static let backspace = Key(rawValue: 127)
     static let enter = Key(rawValue: 10)
-    static let up = Key(rawValue: 65)
-    static let down = Key(rawValue: 66)
-    static let left = Key(rawValue: 68)
-    static let right = Key(rawValue: 67)
+    static let `return` = Key(rawValue: 13)
     static let esc = Key(rawValue: 27)
     static let space = Key(rawValue: 32)
+
+    static let up = Key(rawValue: 1065)
+    static let down = Key(rawValue: 1066)
+    static let left = Key(rawValue: 1068)
+    static let right = Key(rawValue: 1067)
 
     static let A = Key(rawValue: 65)
     static let a = Key(rawValue: 97)
@@ -62,12 +65,37 @@ struct Key {
     static let z = Key(rawValue: 122)
     static let Z = Key(rawValue: 90)
 
-    static func char(_ c: Int8) -> Key { return Key(rawValue: c) }
-    let rawValue: Int8
+    static func fromChar(_ c: Int16) -> Key { return Key(rawValue: c) }
+    static func fromChar(_ c: Int8) -> Key { return Key(rawValue: Int16(c)) }
+    let rawValue: Int16
 }
 
 extension Key: Equatable {
     static func == (lhs: Key, rhs: Key) -> Bool {
         return lhs.rawValue == rhs.rawValue
+    }
+}
+
+extension Key: Hashable {
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(rawValue)
+    }
+}
+
+extension Key: CustomStringConvertible {
+    var description: String {
+        switch self {
+        case .backspace: return "backspace"
+        case .enter: return "enter"
+        case .return: return "return"
+        case .up: return "up"
+        case .down: return "down"
+        case .left: return "left"
+        case .right: return "right"
+        case .esc: return "esc"
+        case .space: return "space"
+        // case .none: return "none"
+        default: return String(UnicodeScalar(UInt8(rawValue)))
+        }
     }
 }
